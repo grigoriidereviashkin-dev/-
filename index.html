@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Передача геопозиции</title>
+<style>
+  body{font-family:Arial,sans-serif;max-width:520px;margin:60px auto;padding:24px;line-height:1.5}
+  button{width:100%;padding:14px;margin-top:12px;font-size:16px;border:0;border-radius:10px;cursor:pointer}
+  #allow{background:#111;color:#fff}
+  #map{display:none;margin-top:18px;height:320px;width:100%;border:0;border-radius:12px}
+  .muted{color:#666;font-size:14px}
+  code{word-break:break-all}
+</style>
+</head>
+<body>
+<h2>Передача геопозиции</h2>
+<p>Эта страница запрашивает доступ к геопозиции устройства. Координаты передаются только после нажатия кнопки и подтверждения разрешения браузера.</p>
+<button id="allow">Разрешить геопозицию</button>
+<p id="status" class="muted"></p>
+<iframe id="map" loading="lazy"></iframe>
+
+<script>
+const statusEl = document.getElementById('status');
+const map = document.getElementById('map');
+
+document.getElementById('allow').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'Этот браузер не поддерживает геолокацию.';
+    return;
+  }
+
+  statusEl.textContent = 'Запрашиваю разрешение на геопозицию…';
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      statusEl.innerHTML =
+        'Геопозиция получена.<br>' +
+        'Широта: <code>' + latitude.toFixed(6) + '</code><br>' +
+        'Долгота: <code>' + longitude.toFixed(6) + '</code><br>' +
+        'Точность: примерно <code>' + Math.round(accuracy) + ' м</code>';
+
+      map.src =
+        'https://www.openstreetmap.org/export/embed.html?bbox=' +
+        (longitude-0.01) + '%2C' + (latitude-0.01) + '%2C' +
+        (longitude+0.01) + '%2C' + (latitude+0.01) +
+        '&layer=mapnik&marker=' + latitude + '%2C' + longitude;
+      map.style.display = 'block';
+
+      /*
+        Для удалённого хранения/отслеживания сюда нужно добавить
+        отправку координат на ВАШ сервер по HTTPS, например:
+        fetch('https://ВАШ-ДОМЕН/api/location', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({latitude, longitude, accuracy, time:Date.now()})
+        });
+      */
+    },
+    err => {
+      const messages = {
+        1: 'Доступ к геопозиции запрещён пользователем.',
+        2: 'Не удалось определить геопозицию.',
+        3: 'Истекло время ожидания геопозиции.'
+      };
+      statusEl.textContent = messages[err.code] || 'Не удалось получить геопозицию.';
+    },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+  );
+});
+</script>
+</body>
+</html>
